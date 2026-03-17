@@ -6,7 +6,6 @@ Generates daily horoscopes for all zodiac signs using the Groq free API
 import requests
 import os
 from datetime import datetime
-from typing import Dict, Optional
 import time
 
 
@@ -58,8 +57,9 @@ class HoroscopeGenerator:
                     'content': (
                         'Write a daily horoscope for ' + sign.capitalize() + ' for ' + today + '. '
                         + sign.capitalize() + ' is ' + traits + '. '
-                        'Write 5-6 sentences, mystical and encouraging tone, '
-                        'covering love, career, and personal growth. '
+                        'Write 3-4 sentences in a friendly, straightforward tone. '
+                        'Give practical, grounded advice covering love, career, and personal growth. '
+                        'Avoid overly poetic or mystical language. '
                         'Return only the horoscope paragraph, no headings or labels.'
                     )
                 }
@@ -80,7 +80,6 @@ class HoroscopeGenerator:
             return {
                 'date': datetime.now().strftime('%B %d, %Y'),
                 'summary': text,
-                'ratings': {},
                 'scraped_at': datetime.now().isoformat()
             }
 
