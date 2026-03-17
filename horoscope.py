@@ -1,6 +1,6 @@
 """
-HuggingFace Daily Horoscope Generator
-Generates daily horoscopes for all zodiac signs using the HuggingFace Inference API
+Groq Daily Horoscope Generator
+Generates daily horoscopes for all zodiac signs using the Groq free API
 """
 
 import requests
@@ -12,8 +12,8 @@ import time
 
 class HoroscopeGenerator:
 
-    MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
-    API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
+    API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    MODEL = "llama-3.3-70b-versatile"
 
     SIGNS = [
         'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo',
@@ -36,52 +36,46 @@ class HoroscopeGenerator:
     }
 
     def __init__(self):
-        self.token = os.environ.get('HF_TOKEN', '')
+        self.token = os.environ.get('GROQ_API_KEY', '')
         self.headers = {
             'Authorization': 'Bearer ' + self.token,
             'Content-Type': 'application/json'
         }
-
-    def build_prompt(self, sign):
-        today = datetime.now().strftime('%B %d, %Y')
-        traits = self.SIGN_TRAITS.get(sign, '')
-        prompt = (
-            "[INST] Write a daily horoscope for " + sign.capitalize() + " for " + today + ". "
-            + sign.capitalize() + " is " + traits + ". "
-            "Write 3-4 sentences, mystical and encouraging tone, "
-            "covering love, career, and personal growth. "
-            "Return only the horoscope paragraph, no headings or labels. [/INST]"
-        )
-        return prompt
 
     def generate_horoscope(self, sign):
         if sign not in self.SIGNS:
             print("Invalid sign: " + sign)
             return None
 
-        prompt = self.build_prompt(sign)
+        today = datetime.now().strftime('%B %d, %Y')
+        traits = self.SIGN_TRAITS.get(sign, '')
+
         payload = {
-            'inputs': prompt,
-            'parameters': {
-                'max_new_tokens': 200,
-                'temperature': 0.85,
-                'do_sample': True,
-                'return_full_text': False
-            }
+            'model': self.MODEL,
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': (
+                        'Write a daily horoscope for ' + sign.capitalize() + ' for ' + today + '. '
+                        + sign.capitalize() + ' is ' + traits + '. '
+                        'Write 3-4 sentences, mystical and encouraging tone, '
+                        'covering love, career, and personal growth. '
+                        'Return only the horoscope paragraph, no headings or labels.'
+                    )
+                }
+            ],
+            'max_tokens': 200,
+            'temperature': 0.85
         }
 
         try:
-            response = requests.post(self.API_URL, headers=self.headers, json=payload, timeout=60)
+            response = requests.post(self.API_URL, headers=self.headers, json=payload, timeout=30)
             response.raise_for_status()
             result = response.json()
+            text = result['choices'][0]['message']['content'].strip()
 
-            if isinstance(result, list) and len(result) > 0:
-                text = result[0].get('generated_text', '').strip()
-            else:
-                text = str(result).strip()
-
-            # wait 2 seconds between calls so we dont hit rate limits
-            time.sleep(2)
+            # wait 1 second between calls to stay within rate limits
+            time.sleep(1)
 
             return {
                 'date': datetime.now().strftime('%B %d, %Y'),
