@@ -58,7 +58,7 @@ class HoroscopeGenerator:
                     'content': (
                         'Write a daily horoscope for ' + sign.capitalize() + ' for ' + today + '. '
                         + sign.capitalize() + ' is ' + traits + '. '
-                        'Write 3-4 sentences, mystical and encouraging tone, '
+                        'Write 5-6 sentences, mystical and encouraging tone, '
                         'covering love, career, and personal growth. '
                         'Return only the horoscope paragraph, no headings or labels.'
                     )
