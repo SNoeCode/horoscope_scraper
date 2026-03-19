@@ -44,6 +44,15 @@ class HoroscopeGenerator:
         'social connections and community'
     ]
 
+    MOODS = [
+        'cautious and introspective', 'bold and decisive', 'warm and romantic',
+        'grounded and practical', 'restless and curious', 'hopeful and optimistic',
+        'reflective and healing', 'sharp and ambitious', 'playful and light',
+        'serious and determined', 'tender and vulnerable', 'energized and confident'
+    ]
+
+    FOCUS_AREAS = ['love', 'career', 'finances', 'health', 'personal growth']
+
     def __init__(self):
         self.token = os.environ.get('GROQ_API_KEY', '')
         self.headers = {
@@ -51,9 +60,9 @@ class HoroscopeGenerator:
             'Content-Type': 'application/json'
         }
 
-    def _daily_theme(self, date_str):
-        index = int(hashlib.md5(date_str.encode()).hexdigest(), 16) % len(self.THEMES)
-        return self.THEMES[index]
+    def _pick(self, pool, seed):
+        index = int(hashlib.md5(seed.encode()).hexdigest(), 16) % len(pool)
+        return pool[index]
 
     def generate_horoscope(self, sign):
         if sign not in self.SIGNS:
@@ -62,7 +71,11 @@ class HoroscopeGenerator:
 
         today = datetime.now().strftime('%B %d, %Y')
         traits = self.SIGN_TRAITS.get(sign, '')
-        theme = self._daily_theme(today)
+
+        # Each sign gets its own theme and mood, independent of other signs
+        theme = self._pick(self.THEMES, today + sign)
+        mood = self._pick(self.MOODS, sign + today)
+        focus = self._pick(self.FOCUS_AREAS, sign + today + 'focus')
 
         payload = {
             'model': self.MODEL,
@@ -70,25 +83,28 @@ class HoroscopeGenerator:
                 {
                     'role': 'system',
                     'content': (
-                        'You are an astrologer writing daily horoscopes. '
-                        'Each day must feel meaningfully different — vary the tone, focus, and specific advice. '
-                        'Never reuse phrases from previous days. '
-                        'Some days are challenging, some are lucky, some are introspective — mix it up.'
+                        'You are an astrologer writing sharp, varied daily horoscopes. '
+                        'Each sign must read completely differently — different structure, different vocabulary, different emotional register. '
+                        'Some horoscopes are a warning. Some are an invitation. Some are a push. Some are reassurance. '
+                        'Avoid generic spiritual filler. Be concrete: name a situation, a tension, a choice, or an opportunity. '
+                        'Never start two horoscopes the same way.'
                     )
                 },
                 {
                     'role': 'user',
                     'content': (
-                        'Write a daily horoscope for ' + sign.capitalize() + ' for ' + today + '. '
-                        + sign.capitalize() + ' is ' + traits + '. '
-                        "Today's energy: " + theme + '. '
-                        'Write 3-4 sentences. Cover one or two areas from: love, career, finances, health, or personal growth — not all of them every day. '
-                        'Vary the mood — sometimes cautious, sometimes bold, sometimes reflective. '
-                        'Be specific and direct. Return only the horoscope paragraph, no headings or labels.'
+                        f'Write a daily horoscope for {sign.capitalize()} for {today}.\n'
+                        f'Sign traits: {traits}.\n'
+                        f"Today's theme: {theme}.\n"
+                        f'Tone: {mood}.\n'
+                        f'Focus area: {focus} only — do not cover other areas.\n'
+                        f'3–4 sentences. Name a specific action, decision, or situation — not just a feeling. '
+                        f'Do not use the phrases "inner wisdom", "inner voice", "the universe", or "tap into". '
+                        f'Return only the horoscope paragraph.'
                     )
                 }
             ],
-            'max_tokens': 200,
+            'max_tokens': 250,
             'temperature': 0.95
         }
 
@@ -101,7 +117,7 @@ class HoroscopeGenerator:
             time.sleep(1)
 
             return {
-                'date': datetime.now().strftime('%B %d, %Y'),
+                'date': today,
                 'summary': text,
                 'scraped_at': datetime.now().isoformat()
             }
