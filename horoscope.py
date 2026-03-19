@@ -5,6 +5,7 @@ Generates daily horoscopes for all zodiac signs using the Groq free API
 
 import requests
 import os
+import hashlib
 from datetime import datetime
 import time
 
@@ -34,12 +35,25 @@ class HoroscopeGenerator:
         'pisces': 'dreamy, empathetic, and artistic'
     }
 
+    THEMES = [
+        'communication and clarity', 'rest and reflection', 'bold action and risk-taking',
+        'finances and practical decisions', 'relationships and emotional depth',
+        'creativity and self-expression', 'ambition and career focus',
+        'healing and letting go', 'new beginnings and fresh starts',
+        'patience and steady progress', 'intuition and inner wisdom',
+        'social connections and community'
+    ]
+
     def __init__(self):
         self.token = os.environ.get('GROQ_API_KEY', '')
         self.headers = {
             'Authorization': 'Bearer ' + self.token,
             'Content-Type': 'application/json'
         }
+
+    def _daily_theme(self, date_str):
+        index = int(hashlib.md5(date_str.encode()).hexdigest(), 16) % len(self.THEMES)
+        return self.THEMES[index]
 
     def generate_horoscope(self, sign):
         if sign not in self.SIGNS:
@@ -48,24 +62,34 @@ class HoroscopeGenerator:
 
         today = datetime.now().strftime('%B %d, %Y')
         traits = self.SIGN_TRAITS.get(sign, '')
+        theme = self._daily_theme(today)
 
         payload = {
             'model': self.MODEL,
             'messages': [
                 {
+                    'role': 'system',
+                    'content': (
+                        'You are an astrologer writing daily horoscopes. '
+                        'Each day must feel meaningfully different — vary the tone, focus, and specific advice. '
+                        'Never reuse phrases from previous days. '
+                        'Some days are challenging, some are lucky, some are introspective — mix it up.'
+                    )
+                },
+                {
                     'role': 'user',
                     'content': (
                         'Write a daily horoscope for ' + sign.capitalize() + ' for ' + today + '. '
                         + sign.capitalize() + ' is ' + traits + '. '
-                        'Write 3-4 sentences in a friendly, straightforward tone. '
-                        'Give practical, grounded advice covering love, career, and personal growth. '
-                        'Avoid overly poetic or mystical language. '
-                        'Return only the horoscope paragraph, no headings or labels.'
+                        "Today's energy: " + theme + '. '
+                        'Write 3-4 sentences. Cover one or two areas from: love, career, finances, health, or personal growth — not all of them every day. '
+                        'Vary the mood — sometimes cautious, sometimes bold, sometimes reflective. '
+                        'Be specific and direct. Return only the horoscope paragraph, no headings or labels.'
                     )
                 }
             ],
             'max_tokens': 200,
-            'temperature': 0.85
+            'temperature': 0.95
         }
 
         try:
@@ -74,7 +98,6 @@ class HoroscopeGenerator:
             result = response.json()
             text = result['choices'][0]['message']['content'].strip()
 
-            # wait 1 second between calls to stay within rate limits
             time.sleep(1)
 
             return {
